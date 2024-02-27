@@ -1,0 +1,23 @@
+{
+  "name": "sourcecodebe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DIEPTHAIDUONG0801/SunClover.git"
+  },
+  "keywords": [
+    "sun",
+    "clover"
+  ],
+  "author": "eric diep",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DIEPTHAIDUONG0801/SunClover/issues"
+  },
+  "homepage": "https://github.com/DIEPTHAIDUONG0801/SunClover#readme"
+}
