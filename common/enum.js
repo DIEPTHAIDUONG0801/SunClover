@@ -9,6 +9,9 @@ exports.RouterType = Object.freeze({
 exports.DataResponse = Object.freeze([
     { errorCode: '0', message: 'Success' },
     { errorCode: '1', message: 'Invalid Session' },
+
+    { errorCode: '001001', message: 'Not found role id' },
+    { errorCode: '001002', message: 'Role name is requied' },
 ]);
 
 exports.get_DataResponse = (Code) => {

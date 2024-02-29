@@ -1,9 +1,36 @@
 'use strict';
 
+const log = require('log4js').getLogger('App');
 const express = require('express');
-const cmEnum = require('@common/enum');
+const morgan = require('morgan');
+const cmEnum = require('./common/enum');
+const cmUtils = require('./common/utils');
 const _ = require('lodash');
-const configuration = require('@root/configuration');
+const configuration = require('./configuration');
+const helmet = require('helmet');
+const noCache = require('nocache');
+const compression = require('compression');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+morgan.token('user', (req) => _.get(req, 'user.Email', '-'));
+morgan.token('fullname', (req) => _.get(req, 'user.FullName', '-'));
+
+const formatRequests = '<Req> username::user || fullname::fullname || ip::remote-addr :remote-user || from::referrer || request_time::[:date[iso]] || :method :url response::status || time::response-time ms';
+const morganFormatRequests = morgan.compile(formatRequests);
+const loggerMiddlewareRequests = morgan(morganFormatRequests, {
+    immediate: true,
+    stream: {
+        write: (str) => log.info(_.trimEnd(str, '\n')), // remove duplicated newlines
+    },
+});
+const formatResponses = '<Res> username::user || fullname::fullname || ip::remote-addr :remote-user || from::referrer || response_time::[:date[iso]] || :method :url response::status || time::response-time ms';
+const morganFormatResponses = morgan.compile(formatResponses);
+const loggerMiddlewareResponses = morgan(morganFormatResponses, {
+    stream: {
+        write: (str) => log.info(_.trimEnd(str, '\n')), // remove duplicated newlines
+    },
+});
 
 module.exports = (async () => {
     _setupProcessHandlers();
@@ -11,6 +38,13 @@ module.exports = (async () => {
     app.use(helmet({
         frameguard: false,
     }));
+    app.use(noCache()); // disable caching of response
+    app.use(compression()); // decrease the size of the response body
+    app.use(bodyParser.json({ limit: configuration.get('server.limition.json') }));
+    app.use(bodyParser.urlencoded({ limit: configuration.get('server.limition.urlencoded'), extended: true }));
+    app.use(bodyParser.text({ limit: configuration.get('server.limition.text') })); // to support any text string
+    app.use(cors(configuration.get('server.cors')));
+    app.set('trust proxy', true);
 
     const web_routers = configuration.get('server.urls.web_routers');
 
@@ -37,7 +71,7 @@ function _setupProcessHandlers() {
 
 function _setupApiHandler(app) {
     app.use(_genericErrorMiddleware);
-    swagger.setAppHandler(app);
+    // swagger.setAppHandler(app);
 }
 
 function _setupMiddlewareRouters(app, routes, routeType) {
@@ -98,4 +132,13 @@ function _genericErrorMiddleware(err, req, res, next) {
         }
     }
     return res.status(httpStatus).json(response);
+}
+
+function _simplifyError(req, error) {
+    const message = (_.isPlainObject(error) && _.has(error, 'message')) ? _.get(error, 'message') : error;
+
+    const { code, errors } = cmUtils.parseError(message);
+    // print mapping of url to error code for easy debugging
+    log.error(`Code: ${code}, URL: ${req.originalUrl}, Username: ${_.get(req.user, 'username')}`);
+    return { code, errors };
 }
